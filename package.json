@@ -1,0 +1,12 @@
+{
+  "name": "daymark-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "@octokit/rest": "^21.0.0",
+    "axios": "^1.7.0",
+    "express": "^4.19.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
