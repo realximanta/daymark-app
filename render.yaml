@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: daymark-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: GH_APP_ID
+        sync: false
+      - key: GH_PRIVATE_KEY
+        sync: false
+      - key: GH_INSTALL_ID
+        sync: false
+      - key: GH_REPO_OWNER
+        sync: false
+      - key: GH_REPO_NAME
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: MODEL_NAME
+        value: openai/gpt-oss-20b
+      - key: NODE_VERSION
+        value: 20.11.0
