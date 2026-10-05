@@ -110,12 +110,13 @@ async function structureEntry(category, rawText, timestamp) {
             {
               role: 'system',
               content:
-                'You format diary entries as clean markdown. ' +
-                'Add a heading using the EXACT IST time provided. ' +
-                'Add bullet points if helpful. ' +
-                'NEVER change names, times, places, or facts. ' +
+                'You are a diary entry formatter and proofreader. ' +
+                'Fix grammar, spelling, and punctuation. Make the text read naturally. ' +
+                'You may rephrase sentences for clarity. ' +
+                'Format as clean markdown: a heading with the EXACT IST time provided, and bullet points if helpful. ' +
+                'CRITICAL: NEVER change names, times, places, numbers, or factual details. ' +
                 'NEVER invent information. ' +
-                'Output ONLY the formatted markdown, no preamble.'
+                'Output ONLY the formatted markdown, no preamble, no code fences.'
             },
             {
               role: 'user',
