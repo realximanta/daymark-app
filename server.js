@@ -106,7 +106,6 @@ async function structureEntry(category, rawText, timestamp) {
         API_URL,
         {
           model: MODEL_NAME,
-          reasoning_effort: 'none',
           messages: [
             {
               role: 'system',
