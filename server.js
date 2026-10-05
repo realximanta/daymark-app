@@ -7,7 +7,7 @@ const app = express();
 app.use(express.json({ limit: '1mb' }));
 
 // ═══════════════════════════════════════════
-// 🔐 GITHUB APP CONFIG
+// 🔐 GITHUB APP CONFIG  (Render env vars)
 // ═══════════════════════════════════════════
 const GH_APP_ID        = process.env.GH_APP_ID;
 const GH_PRIVATE_KEY   = (process.env.GH_PRIVATE_KEY || '').replace(/\\n/g, '\n');
@@ -16,14 +16,14 @@ const REPO_OWNER       = process.env.GH_REPO_OWNER;
 const REPO_NAME        = process.env.GH_REPO_NAME;
 
 // ═══════════════════════════════════════════
-// 🤖 GROQ AI CONFIG
+// 🤖 GROQ AI CONFIG  (Render env vars)
 // ═══════════════════════════════════════════
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const MODEL_NAME   = process.env.MODEL_NAME || 'llama-3.1-8b-instant';
+const MODEL_NAME   = process.env.MODEL_NAME || 'qwen/qwen3.6-27b';
 const API_URL      = 'https://api.groq.com/openai/v1/chat/completions';
 
 // ═══════════════════════════════════════════
-// 🗂️ CATEGORY → FILE NAME
+// 🗂️ CATEGORY → FILE NAME MAP
 // ═══════════════════════════════════════════
 const CATEGORY_FILE = {
   'currently-doing': 'currently-doing.md',
@@ -65,7 +65,7 @@ function toISTDateStr(epochMs) {
 }
 
 // ═══════════════════════════════════════════
-// 🔑 GitHub App token (cached)
+// 🔑 GitHub App installation token (cached)
 // ═══════════════════════════════════════════
 let cachedToken = null;
 let tokenExpiry = 0;
@@ -89,7 +89,7 @@ async function getInstallationToken() {
 }
 
 // ═══════════════════════════════════════════
-// 🤖 Groq: structure entry (with retries)
+// 🤖 Groq: structure entry (retries + IST)
 // ═══════════════════════════════════════════
 async function structureEntry(category, rawText, timestamp) {
   const istTime = toIST(timestamp);
@@ -106,6 +106,7 @@ async function structureEntry(category, rawText, timestamp) {
         API_URL,
         {
           model: MODEL_NAME,
+          reasoning_effort: 'none',
           messages: [
             {
               role: 'system',
@@ -139,7 +140,6 @@ async function structureEntry(category, rawText, timestamp) {
       const status = err.response?.status;
       console.error(`🤖 AI attempt ${attempt} failed:`, err.message, '| status:', status);
 
-      // 🔁 Retry only on rate-limit (429) or server error (5xx)
       if ((status === 429 || (status >= 500 && status < 600)) && attempt < 3) {
         const waitMs = attempt * 3000;
         console.error(`🤖 waiting ${waitMs}ms before retry...`);
@@ -147,7 +147,6 @@ async function structureEntry(category, rawText, timestamp) {
         continue;
       }
 
-      // else — give up, log details, fall back
       console.error('🤖 Data:', JSON.stringify(err.response?.data));
       return fallback;
     }
@@ -156,7 +155,7 @@ async function structureEntry(category, rawText, timestamp) {
 }
 
 // ═══════════════════════════════════════════
-// 📝 POST /entry
+// 📝 POST /entry — main write path
 // ═══════════════════════════════════════════
 app.post('/entry', async (req, res) => {
   try {
@@ -168,8 +167,10 @@ app.post('/entry', async (req, res) => {
     const date = toISTDateStr(ts);
     const path = `${date}/${fileName}`;
 
+    // 🧠 refine with Groq
     const structured = await structureEntry(category, rawText, ts);
 
+    // 🐙 write to GitHub
     const token = await getInstallationToken();
     const octokit = new Octokit({ auth: token });
 
@@ -184,7 +185,7 @@ app.post('/entry', async (req, res) => {
       const existing = Buffer.from(data.content, 'base64').toString('utf8');
       newContent = `${existing}\n\n---\n\n${structured}`;
     } catch (e) {
-      // new file
+      // file doesn't exist yet → new file
     }
 
     await octokit.repos.createOrUpdateFileContents({
@@ -204,7 +205,7 @@ app.post('/entry', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════
-// 💓 HEALTH
+// 💓 HEALTH (UptimeRobot pings this)
 // ═══════════════════════════════════════════
 app.head('/health', (_, res) => res.status(200).end());
 app.get('/health',  (_, res) => res.json({ status: 'alive', time: Date.now() }));
